@@ -1,6 +1,7 @@
 package weather
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"reflect"
@@ -34,6 +35,27 @@ func withMockResponse(t *testing.T, body string, statusCode int) {
 	t.Cleanup(func() { httpClient = original })
 }
 
+type hostStubTransport struct {
+	byHost map[string]stubTransport
+}
+
+func (h hostStubTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	stub, ok := h.byHost[req.URL.Host]
+	if !ok {
+		return nil, fmt.Errorf("no stub registered for host %q", req.URL.Host)
+	}
+
+	return stub.RoundTrip(req)
+}
+
+func withMockResponsesByHost(t *testing.T, byHost map[string]stubTransport) {
+	t.Helper()
+
+	original := httpClient
+	httpClient = &http.Client{Transport: hostStubTransport{byHost: byHost}}
+	t.Cleanup(func() { httpClient = original })
+}
+
 func TestGeocodeCityReturnsFirstMatchingResult(t *testing.T) {
 	withMockResponse(t, `{
 		"results": [
@@ -63,7 +85,7 @@ func TestGeocodeCityThrowsWhenNoResultsAreFound(t *testing.T) {
 
 func TestLocateByIPReturnsLocationFromIPLookup(t *testing.T) {
 	withMockResponse(t, `{
-		"city": "Kathmandu", "country_name": "Nepal", "latitude": 27.7172, "longitude": 85.324
+		"city": "Kathmandu", "country": "Nepal", "latitude": 27.7172, "longitude": 85.324, "success": true
 	}`, 200)
 
 	location, err := LocateByIP()
@@ -78,11 +100,40 @@ func TestLocateByIPReturnsLocationFromIPLookup(t *testing.T) {
 }
 
 func TestLocateByIPThrowsWhenTheIPCannotBeResolved(t *testing.T) {
-	withMockResponse(t, `{"error": true, "reason": "RateLimited"}`, 200)
+	withMockResponse(t, `{"success": false}`, 200)
 
 	_, err := LocateByIP()
 	if err == nil || !strings.Contains(err.Error(), "unable to detect location") {
 		t.Errorf("LocateByIP() error = %v, want it to mention \"unable to detect location\"", err)
+	}
+}
+
+func TestLocateByIPFallsBackToSecondProviderWhenPrimaryFails(t *testing.T) {
+	withMockResponsesByHost(t, map[string]stubTransport{
+		"ipwho.is":   {statusCode: 429},
+		"ip-api.com": {body: `{"status": "success", "city": "Kathmandu", "country": "Nepal", "lat": 27.7172, "lon": 85.324}`, statusCode: 200},
+	})
+
+	location, err := LocateByIP()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	want := Location{City: "Kathmandu", Country: "Nepal", Latitude: 27.7172, Longitude: 85.324}
+	if !reflect.DeepEqual(location, want) {
+		t.Errorf("LocateByIP() = %+v, want %+v", location, want)
+	}
+}
+
+func TestLocateByIPThrowsWhenBothProvidersFail(t *testing.T) {
+	withMockResponsesByHost(t, map[string]stubTransport{
+		"ipwho.is":   {statusCode: 429},
+		"ip-api.com": {statusCode: 429},
+	})
+
+	_, err := LocateByIP()
+	if err == nil || !strings.Contains(err.Error(), "unable to reach the IP location service") {
+		t.Errorf("LocateByIP() error = %v, want it to mention \"unable to reach the IP location service\"", err)
 	}
 }
 

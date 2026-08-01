@@ -84,9 +84,26 @@ func GeocodeCity(city string) (Location, error) {
 	}, nil
 }
 
-// LocateByIP resolves the caller's location from their IP address.
+// LocateByIP resolves the caller's location from their IP address, trying
+// each provider in turn until one succeeds.
 func LocateByIP() (Location, error) {
-	res, err := httpClient.Get("https://ipapi.co/json/")
+	providers := []func() (Location, error){locateByIPWhoIs, locateByIPAPI}
+
+	var err error
+	for _, provider := range providers {
+		var location Location
+
+		location, err = provider()
+		if err == nil {
+			return location, nil
+		}
+	}
+
+	return Location{}, err
+}
+
+func locateByIPWhoIs() (Location, error) {
+	res, err := httpClient.Get("https://ipwho.is/")
 	if err != nil {
 		return Location{}, fmt.Errorf("unable to reach the IP location service")
 	}
@@ -97,26 +114,61 @@ func LocateByIP() (Location, error) {
 	}
 
 	var data struct {
-		City        string  `json:"city"`
-		CountryName string  `json:"country_name"`
-		Latitude    float64 `json:"latitude"`
-		Longitude   float64 `json:"longitude"`
-		Error       bool    `json:"error"`
+		City      string  `json:"city"`
+		Country   string  `json:"country"`
+		Latitude  float64 `json:"latitude"`
+		Longitude float64 `json:"longitude"`
+		Success   bool    `json:"success"`
 	}
 
 	if err := json.NewDecoder(res.Body).Decode(&data); err != nil {
 		return Location{}, fmt.Errorf("unable to reach the IP location service")
 	}
 
-	if data.Error || data.Latitude == 0 {
+	if !data.Success || data.Latitude == 0 {
 		return Location{}, fmt.Errorf("unable to detect location from IP address")
 	}
 
 	return Location{
 		City:      data.City,
-		Country:   data.CountryName,
+		Country:   data.Country,
 		Latitude:  data.Latitude,
 		Longitude: data.Longitude,
+	}, nil
+}
+
+func locateByIPAPI() (Location, error) {
+	res, err := httpClient.Get("http://ip-api.com/json/")
+	if err != nil {
+		return Location{}, fmt.Errorf("unable to reach the IP location service")
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode < 200 || res.StatusCode >= 300 {
+		return Location{}, fmt.Errorf("unable to reach the IP location service")
+	}
+
+	var data struct {
+		Status  string  `json:"status"`
+		City    string  `json:"city"`
+		Country string  `json:"country"`
+		Lat     float64 `json:"lat"`
+		Lon     float64 `json:"lon"`
+	}
+
+	if err := json.NewDecoder(res.Body).Decode(&data); err != nil {
+		return Location{}, fmt.Errorf("unable to reach the IP location service")
+	}
+
+	if data.Status != "success" || data.Lat == 0 {
+		return Location{}, fmt.Errorf("unable to detect location from IP address")
+	}
+
+	return Location{
+		City:      data.City,
+		Country:   data.Country,
+		Latitude:  data.Lat,
+		Longitude: data.Lon,
 	}, nil
 }
 

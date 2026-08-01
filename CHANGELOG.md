@@ -1,5 +1,8 @@
 # Skycast Changelog
 
+## 1.0.2 - YYYY-MM-DD
+- Changed: replace rate-limited IP location service
+
 ## 1.0.1 - 2026-08-01
 - Changed: fix weather fetching
 
