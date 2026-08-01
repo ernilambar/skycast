@@ -4,13 +4,22 @@ A terminal weather app.
 
 ## Install
 
-**From source** (requires Node.js 22+ and [Bun](https://bun.sh)):
+**Prebuilt binary** (macOS):
+
+```bash
+curl -L -o skycast https://github.com/ernilambar/skycast/releases/latest/download/skycast-darwin-arm64 # Apple Silicon
+# or: skycast-darwin-amd64 for Intel Macs
+xattr -d com.apple.quarantine skycast 2>/dev/null || true
+chmod +x skycast
+sudo mv skycast /usr/local/bin/
+```
+
+**From source** (requires Go 1.22+):
 
 ```bash
 git clone https://github.com/ernilambar/skycast.git
 cd skycast
-bun install
-bun run compile
+go build -o skycast .
 sudo mv skycast /usr/local/bin/
 ```
 
@@ -38,21 +47,19 @@ skycast London --plain
 
 ## Development
 
-After cloning and `bun install`:
-
 ```bash
-bun run test        # run tests (node:test)
-bun run lint         # check code style (standard)
-bun run format       # auto-fix code style (standard --fix)
-bun run compile      # build a standalone binary (./skycast)
+go build ./...    # compile all packages
+go test ./...     # run tests
+go vet ./...      # static analysis
+gofmt -l .        # check formatting
 ```
 
 ### Manual Testing
 
 ```bash
-bun src/index.mjs Tokyo --forecast
-bun src/index.mjs "New York" --units imperial --plain
-bun src/index.mjs
+go run . Tokyo --forecast
+go run . "New York" --units imperial --plain
+go run .
 ```
 
 ## Copyright and License

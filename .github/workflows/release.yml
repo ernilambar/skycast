@@ -13,24 +13,30 @@ jobs:
     strategy:
       matrix:
         include:
-          - target: bun-darwin-arm64
+          - goos: darwin
+            goarch: arm64
             suffix: darwin-arm64
-          - target: bun-darwin-x64
+          - goos: darwin
+            goarch: amd64
             suffix: darwin-amd64
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
-
-      - name: Install dependencies
-        run: bun install
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
 
       - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
         run: |
           mkdir -p dist
-          bun build --compile --target=${{ matrix.target }} --minify ./src/index.mjs --outfile dist/skycast-${{ matrix.suffix }}
+          version="${GITHUB_REF_NAME#v}"
+          go build -ldflags "-s -w -X main.version=${version}" -o dist/skycast-${{ matrix.suffix }} .
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
