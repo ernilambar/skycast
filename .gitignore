@@ -22,7 +22,6 @@ Thumbs.db
 
 # Ignored extensions
 *.bak
-*.bun-build
 *.cache
 *.diff
 *.err
@@ -40,7 +39,7 @@ Thumbs.db
 # Project folders
 /build/
 /deploy/
-/node_modules/
+/dist/
 /vendor/
 
 # Compiled binary

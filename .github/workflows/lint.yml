@@ -13,8 +13,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
 
-      - run: bun install
-      - run: bun run lint
+      - name: Check formatting (gofmt)
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: Vet
+        run: go vet ./...
