@@ -1,0 +1,10 @@
+{
+  "easyReplaceInFiles": [
+    {
+      "files": "src/index.mjs",
+      "from": "\\.version\\('[^']*'\\)",
+      "type": "regex",
+      "to": ".version('$$package__version$$')"
+    }
+  ]
+}
