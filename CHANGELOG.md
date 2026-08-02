@@ -1,5 +1,8 @@
 # Skycast Changelog
 
+## 1.0.3 - 2026-08-02
+- Removed: bordered card layout, fixes emoji misalignment
+
 ## 1.0.2 - 2026-08-01
 - Changed: replace rate-limited IP location service
 

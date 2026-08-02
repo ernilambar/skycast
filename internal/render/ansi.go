@@ -1,9 +1,5 @@
 package render
 
-import "regexp"
-
-var ansiCodeRe = regexp.MustCompile("\x1b\\[[0-9;]*m")
-
 func ansi(code, s string) string {
 	return "\x1b[" + code + "m" + s + "\x1b[0m"
 }
@@ -20,8 +16,3 @@ func BoldCyan(s string) string   { return ansi("1;36", s) }
 func BoldRed(s string) string    { return ansi("1;31", s) }
 func BoldBlue(s string) string   { return ansi("1;34", s) }
 func BoldYellow(s string) string { return ansi("1;33", s) }
-
-// visibleLen returns the rune count of s ignoring ANSI escape sequences.
-func visibleLen(s string) int {
-	return len([]rune(ansiCodeRe.ReplaceAllString(s, "")))
-}

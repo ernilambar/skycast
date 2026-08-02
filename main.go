@@ -49,7 +49,7 @@ func main() {
 
 	rootCmd.Flags().BoolVarP(&forecast, "forecast", "f", false, "Show 5-day forecast")
 	rootCmd.Flags().StringVarP(&units, "units", "u", "metric", "Temperature units: metric (C) or imperial (F)")
-	rootCmd.Flags().BoolVarP(&plain, "plain", "p", false, "Output simple plain text without ASCII borders")
+	rootCmd.Flags().BoolVarP(&plain, "plain", "p", false, "Output simple plain text without colors or icons")
 	rootCmd.SetVersionTemplate("{{.Version}}\n")
 
 	if err := rootCmd.Execute(); err != nil {
