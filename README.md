@@ -34,7 +34,7 @@ skycast [city] [options]
 | `[city]` | City name to fetch weather for (defaults to IP location) |
 | `-f, --forecast` | Show 5-day forecast |
 | `-u, --units <type>` | Temperature units: `metric` (C) or `imperial` (F). Default: `metric` |
-| `-p, --plain` | Output simple plain text without ASCII borders |
+| `-p, --plain` | Output simple plain text without colors or icons |
 
 ### Examples
 

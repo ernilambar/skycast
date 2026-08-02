@@ -70,6 +70,14 @@ func weekdayName(date string) string {
 	return t.Format("Mon")
 }
 
+func formatClock(iso string) string {
+	t, err := time.Parse("2006-01-02T15:04", iso)
+	if err != nil {
+		return "--:--"
+	}
+	return t.Format("15:04")
+}
+
 // CurrentWeather prints the current conditions for a location, either as a
 // bordered card or as plain text.
 func CurrentWeather(location weather.Location, current weather.CurrentWeather, units string, plain bool) {
@@ -82,24 +90,30 @@ func CurrentWeather(location weather.Location, current weather.CurrentWeather, u
 		fmt.Printf("Feels Like: %d%s\n", round(current.FeelsLike), unitLabel(units))
 		fmt.Printf("Humidity: %s%%\n", numStr(current.Humidity))
 		fmt.Printf("Wind Speed: %s %s\n", numStr(current.Wind), windUnitLabel(units))
+		fmt.Printf("Sunrise: %s\n", formatClock(current.Sunrise))
+		fmt.Printf("Sunset: %s\n", formatClock(current.Sunset))
 		return
 	}
 
 	icon := weatherIcons[condition]
-	cityTitle := BoldCyan(fmt.Sprintf("  📍 %s  ", strings.ToUpper(locationLabel(location))))
+	cityTitle := BoldCyan(fmt.Sprintf("📍 %s", strings.ToUpper(locationLabel(location))))
 
 	stats := fmt.Sprintf(
-		"\n%s   %s\n%s %s\n%s  %d%s\n%s    %s%%\n%s  %s %s\n",
+		"%s   %s\n%s %s\n%s  %d%s\n%s    %s%%\n%s  %s %s\n%s     %s\n%s      %s",
 		Bold("Condition:"), Italic(condition),
 		Bold("Temperature:"), formatTemp(current.Temperature, units),
 		Bold("Feels Like:"), round(current.FeelsLike), unitLabel(units),
 		Bold("Humidity:"), numStr(current.Humidity),
 		Bold("Wind Speed:"), numStr(current.Wind), windUnitLabel(units),
+		Bold("Sunrise:"), formatClock(current.Sunrise),
+		Bold("Sunset:"), formatClock(current.Sunset),
 	)
 
-	cardBody := icon + "\n" + stats
-
-	fmt.Println(box(cardBody, cityTitle, Cyan, 1, margin{Top: 1, Bottom: 1, Left: 1, Right: 1}))
+	fmt.Println()
+	fmt.Println(cityTitle)
+	fmt.Println(icon)
+	fmt.Println(stats)
+	fmt.Println()
 }
 
 // Forecast prints a multi-day forecast, either as a bordered card or as
@@ -111,10 +125,11 @@ func Forecast(daily []weather.DailyForecast, units string, plain bool) {
 		for _, day := range daily {
 			condition := CodeToCondition(day.Code)
 			fmt.Printf(
-				"%s: %s, High %d%s, Low %d%s\n",
+				"%s: %s, High %d%s, Low %d%s, Precipitation %d%%\n",
 				weekdayName(day.Date), condition,
 				round(day.TempMax), unitLabel(units),
 				round(day.TempMin), unitLabel(units),
+				round(day.PrecipitationProbability),
 			)
 		}
 		return
@@ -126,13 +141,14 @@ func Forecast(daily []weather.DailyForecast, units string, plain bool) {
 		label := Bold(fmt.Sprintf("%-4s", weekdayName(day.Date)))
 		high := Red(fmt.Sprintf("%5s", fmt.Sprintf("%d°", round(day.TempMax))))
 		low := Blue(fmt.Sprintf("%5s", fmt.Sprintf("%d°", round(day.TempMin))))
+		rain := Cyan(fmt.Sprintf("%3d%%", round(day.PrecipitationProbability)))
 		rows[i] = fmt.Sprintf(
-			"%s %s  %s %s / %s",
-			label, conditionEmoji[condition], fmt.Sprintf("%-13s", condition), high, low,
+			"%s %s  %s %s / %s  💧 %s",
+			label, conditionEmoji[condition], fmt.Sprintf("%-13s", condition), high, low, rain,
 		)
 	}
 
-	content := strings.Join(rows, "\n")
-
-	fmt.Println(box(content, BoldCyan("5-Day Forecast"), Cyan, 1, margin{Top: 0, Bottom: 1, Left: 1, Right: 1}))
+	fmt.Println(BoldCyan("5-Day Forecast"))
+	fmt.Println(strings.Join(rows, "\n"))
+	fmt.Println()
 }

@@ -24,14 +24,17 @@ type CurrentWeather struct {
 	Humidity    float64
 	Wind        float64
 	Code        int
+	Sunrise     string
+	Sunset      string
 }
 
 // DailyForecast holds one day of a multi-day forecast.
 type DailyForecast struct {
-	Date    string
-	Code    int
-	TempMax float64
-	TempMin float64
+	Date                     string
+	Code                     int
+	TempMax                  float64
+	TempMin                  float64
+	PrecipitationProbability float64
 }
 
 // Weather bundles current conditions with an optional daily forecast.
@@ -191,10 +194,16 @@ func FetchWeather(latitude, longitude float64, units string, forecast bool) (Wea
 		"timezone":         {"auto"},
 	}
 
+	dailyFields := "sunrise,sunset"
+	forecastDays := "1"
+
 	if forecast {
-		params.Set("daily", "weather_code,temperature_2m_max,temperature_2m_min")
-		params.Set("forecast_days", "5")
+		dailyFields = "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset"
+		forecastDays = "5"
 	}
+
+	params.Set("daily", dailyFields)
+	params.Set("forecast_days", forecastDays)
 
 	res, err := httpClient.Get("https://api.open-meteo.com/v1/forecast?" + params.Encode())
 	if err != nil {
@@ -215,10 +224,13 @@ func FetchWeather(latitude, longitude float64, units string, forecast bool) (Wea
 			WindSpeed10m        float64 `json:"wind_speed_10m"`
 		} `json:"current"`
 		Daily struct {
-			Time             []string  `json:"time"`
-			WeatherCode      []int     `json:"weather_code"`
-			Temperature2mMax []float64 `json:"temperature_2m_max"`
-			Temperature2mMin []float64 `json:"temperature_2m_min"`
+			Time                        []string  `json:"time"`
+			WeatherCode                 []int     `json:"weather_code"`
+			Temperature2mMax            []float64 `json:"temperature_2m_max"`
+			Temperature2mMin            []float64 `json:"temperature_2m_min"`
+			PrecipitationProbabilityMax []float64 `json:"precipitation_probability_max"`
+			Sunrise                     []string  `json:"sunrise"`
+			Sunset                      []string  `json:"sunset"`
 		} `json:"daily"`
 	}
 
@@ -236,14 +248,27 @@ func FetchWeather(latitude, longitude float64, units string, forecast bool) (Wea
 		},
 	}
 
+	if len(data.Daily.Sunrise) > 0 {
+		result.Current.Sunrise = data.Daily.Sunrise[0]
+	}
+	if len(data.Daily.Sunset) > 0 {
+		result.Current.Sunset = data.Daily.Sunset[0]
+	}
+
 	if forecast && len(data.Daily.Time) > 0 {
 		result.Daily = make([]DailyForecast, len(data.Daily.Time))
 		for i, date := range data.Daily.Time {
+			var precipitation float64
+			if i < len(data.Daily.PrecipitationProbabilityMax) {
+				precipitation = data.Daily.PrecipitationProbabilityMax[i]
+			}
+
 			result.Daily[i] = DailyForecast{
-				Date:    date,
-				Code:    data.Daily.WeatherCode[i],
-				TempMax: data.Daily.Temperature2mMax[i],
-				TempMin: data.Daily.Temperature2mMin[i],
+				Date:                     date,
+				Code:                     data.Daily.WeatherCode[i],
+				TempMax:                  data.Daily.Temperature2mMax[i],
+				TempMin:                  data.Daily.Temperature2mMin[i],
+				PrecipitationProbability: precipitation,
 			}
 		}
 	}
