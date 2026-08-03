@@ -30,6 +30,13 @@ var conditionEmoji = map[string]string{
 	"Fog":          "🌫️",
 }
 
+var timeOfDayEmoji = map[string]string{
+	"Dawn":  "🌅",
+	"Day":   "☀️",
+	"Dusk":  "🌇",
+	"Night": "🌙",
+}
+
 var snowCodes = map[int]bool{71: true, 73: true, 75: true, 77: true, 85: true, 86: true}
 
 var rainCodes = map[int]bool{

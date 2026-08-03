@@ -24,6 +24,8 @@ type CurrentWeather struct {
 	Humidity    float64
 	Wind        float64
 	Code        int
+	CloudCover  float64
+	Time        string
 	Sunrise     string
 	Sunset      string
 }
@@ -188,7 +190,7 @@ func FetchWeather(latitude, longitude float64, units string, forecast bool) (Wea
 	params := url.Values{
 		"latitude":         {fmt.Sprintf("%g", latitude)},
 		"longitude":        {fmt.Sprintf("%g", longitude)},
-		"current":          {"temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m"},
+		"current":          {"temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,cloud_cover"},
 		"temperature_unit": {temperatureUnit},
 		"wind_speed_unit":  {windSpeedUnit},
 		"timezone":         {"auto"},
@@ -217,11 +219,13 @@ func FetchWeather(latitude, longitude float64, units string, forecast bool) (Wea
 
 	var data struct {
 		Current struct {
+			Time                string  `json:"time"`
 			Temperature2m       float64 `json:"temperature_2m"`
 			RelativeHumidity2m  float64 `json:"relative_humidity_2m"`
 			ApparentTemperature float64 `json:"apparent_temperature"`
 			WeatherCode         int     `json:"weather_code"`
 			WindSpeed10m        float64 `json:"wind_speed_10m"`
+			CloudCover          float64 `json:"cloud_cover"`
 		} `json:"current"`
 		Daily struct {
 			Time                        []string  `json:"time"`
@@ -245,6 +249,8 @@ func FetchWeather(latitude, longitude float64, units string, forecast bool) (Wea
 			Humidity:    data.Current.RelativeHumidity2m,
 			Wind:        data.Current.WindSpeed10m,
 			Code:        data.Current.WeatherCode,
+			CloudCover:  data.Current.CloudCover,
+			Time:        data.Current.Time,
 		},
 	}
 

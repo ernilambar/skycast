@@ -1,5 +1,8 @@
 # Skycast Changelog
 
+## 1.0.4 - 2026-08-03
+- Added: cloud cover and time-of-day
+
 ## 1.0.3 - 2026-08-02
 - Removed: bordered card layout, fixes emoji misalignment
 

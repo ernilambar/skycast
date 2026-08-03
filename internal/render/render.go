@@ -78,10 +78,46 @@ func formatClock(iso string) string {
 	return t.Format("15:04")
 }
 
+// timeOfDayBucket classifies the current local time into dawn/day/dusk/night
+// relative to the location's actual sunrise/sunset, using a 30-minute twilight
+// window either side. Falls back to "Day" if any timestamp fails to parse.
+func timeOfDayBucket(current, sunrise, sunset string) string {
+	const layout = "2006-01-02T15:04"
+
+	cur, err := time.Parse(layout, current)
+	if err != nil {
+		return "Day"
+	}
+	sr, err := time.Parse(layout, sunrise)
+	if err != nil {
+		return "Day"
+	}
+	ss, err := time.Parse(layout, sunset)
+	if err != nil {
+		return "Day"
+	}
+
+	const twilight = 30 * time.Minute
+	dawnStart, dawnEnd := sr.Add(-twilight), sr.Add(twilight)
+	duskStart, duskEnd := ss.Add(-twilight), ss.Add(twilight)
+
+	switch {
+	case !cur.Before(dawnStart) && cur.Before(dawnEnd):
+		return "Dawn"
+	case !cur.Before(dawnEnd) && cur.Before(duskStart):
+		return "Day"
+	case !cur.Before(duskStart) && cur.Before(duskEnd):
+		return "Dusk"
+	default:
+		return "Night"
+	}
+}
+
 // CurrentWeather prints the current conditions for a location, either as a
 // bordered card or as plain text.
 func CurrentWeather(location weather.Location, current weather.CurrentWeather, units string, plain bool) {
 	condition := CodeToCondition(current.Code)
+	timeOfDay := timeOfDayBucket(current.Time, current.Sunrise, current.Sunset)
 
 	if plain {
 		fmt.Printf("Location: %s\n", locationLabel(location))
@@ -90,6 +126,8 @@ func CurrentWeather(location weather.Location, current weather.CurrentWeather, u
 		fmt.Printf("Feels Like: %d%s\n", round(current.FeelsLike), unitLabel(units))
 		fmt.Printf("Humidity: %s%%\n", numStr(current.Humidity))
 		fmt.Printf("Wind Speed: %s %s\n", numStr(current.Wind), windUnitLabel(units))
+		fmt.Printf("Cloud Cover: %s%%\n", numStr(current.CloudCover))
+		fmt.Printf("Time of Day: %s\n", timeOfDay)
 		fmt.Printf("Sunrise: %s\n", formatClock(current.Sunrise))
 		fmt.Printf("Sunset: %s\n", formatClock(current.Sunset))
 		return
@@ -99,12 +137,14 @@ func CurrentWeather(location weather.Location, current weather.CurrentWeather, u
 	cityTitle := BoldCyan(fmt.Sprintf("📍 %s", strings.ToUpper(locationLabel(location))))
 
 	stats := fmt.Sprintf(
-		"%s   %s\n%s %s\n%s  %d%s\n%s    %s%%\n%s  %s %s\n%s     %s\n%s      %s",
+		"%s   %s\n%s %s\n%s  %d%s\n%s    %s%%\n%s  %s %s\n%s %s%%\n%s %s\n%s     %s\n%s      %s",
 		Bold("Condition:"), Italic(condition),
 		Bold("Temperature:"), formatTemp(current.Temperature, units),
 		Bold("Feels Like:"), round(current.FeelsLike), unitLabel(units),
 		Bold("Humidity:"), numStr(current.Humidity),
 		Bold("Wind Speed:"), numStr(current.Wind), windUnitLabel(units),
+		Bold("Cloud Cover:"), numStr(current.CloudCover),
+		Bold("Time of Day:"), fmt.Sprintf("%s %s", timeOfDay, timeOfDayEmoji[timeOfDay]),
 		Bold("Sunrise:"), formatClock(current.Sunrise),
 		Bold("Sunset:"), formatClock(current.Sunset),
 	)
