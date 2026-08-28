@@ -19,15 +19,16 @@ type Location struct {
 
 // CurrentWeather holds the current conditions for a location.
 type CurrentWeather struct {
-	Temperature float64
-	FeelsLike   float64
-	Humidity    float64
-	Wind        float64
-	Code        int
-	CloudCover  float64
-	Time        string
-	Sunrise     string
-	Sunset      string
+	Temperature   float64
+	FeelsLike     float64
+	Humidity      float64
+	Wind          float64
+	Precipitation float64
+	Code          int
+	CloudCover    float64
+	Time          string
+	Sunrise       string
+	Sunset        string
 }
 
 // DailyForecast holds one day of a multi-day forecast.
@@ -190,10 +191,13 @@ func FetchWeather(latitude, longitude float64, units string, forecast bool) (Wea
 	params := url.Values{
 		"latitude":         {fmt.Sprintf("%g", latitude)},
 		"longitude":        {fmt.Sprintf("%g", longitude)},
-		"current":          {"temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,cloud_cover"},
+		"current":          {"temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,cloud_cover,precipitation"},
 		"temperature_unit": {temperatureUnit},
 		"wind_speed_unit":  {windSpeedUnit},
 		"timezone":         {"auto"},
+	}
+	if units == "imperial" {
+		params.Set("precipitation_unit", "inch")
 	}
 
 	dailyFields := "sunrise,sunset"
@@ -226,6 +230,7 @@ func FetchWeather(latitude, longitude float64, units string, forecast bool) (Wea
 			WeatherCode         int     `json:"weather_code"`
 			WindSpeed10m        float64 `json:"wind_speed_10m"`
 			CloudCover          float64 `json:"cloud_cover"`
+			Precipitation       float64 `json:"precipitation"`
 		} `json:"current"`
 		Daily struct {
 			Time                        []string  `json:"time"`
@@ -244,13 +249,14 @@ func FetchWeather(latitude, longitude float64, units string, forecast bool) (Wea
 
 	result := Weather{
 		Current: CurrentWeather{
-			Temperature: data.Current.Temperature2m,
-			FeelsLike:   data.Current.ApparentTemperature,
-			Humidity:    data.Current.RelativeHumidity2m,
-			Wind:        data.Current.WindSpeed10m,
-			Code:        data.Current.WeatherCode,
-			CloudCover:  data.Current.CloudCover,
-			Time:        data.Current.Time,
+			Temperature:   data.Current.Temperature2m,
+			FeelsLike:     data.Current.ApparentTemperature,
+			Humidity:      data.Current.RelativeHumidity2m,
+			Wind:          data.Current.WindSpeed10m,
+			Precipitation: data.Current.Precipitation,
+			Code:          data.Current.WeatherCode,
+			CloudCover:    data.Current.CloudCover,
+			Time:          data.Current.Time,
 		},
 	}
 

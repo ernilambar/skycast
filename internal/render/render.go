@@ -24,6 +24,13 @@ func windUnitLabel(units string) string {
 	return "km/h"
 }
 
+func precipitationUnitLabel(units string) string {
+	if units == "imperial" {
+		return "in"
+	}
+	return "mm"
+}
+
 func round(v float64) int {
 	return int(math.Round(v))
 }
@@ -126,6 +133,7 @@ func CurrentWeather(location weather.Location, current weather.CurrentWeather, u
 		fmt.Printf("Feels Like: %d%s\n", round(current.FeelsLike), unitLabel(units))
 		fmt.Printf("Humidity: %s%%\n", numStr(current.Humidity))
 		fmt.Printf("Wind Speed: %s %s\n", numStr(current.Wind), windUnitLabel(units))
+		fmt.Printf("Precipitation: %s %s\n", numStr(current.Precipitation), precipitationUnitLabel(units))
 		fmt.Printf("Cloud Cover: %s%%\n", numStr(current.CloudCover))
 		fmt.Printf("Time of Day: %s\n", timeOfDay)
 		fmt.Printf("Sunrise: %s\n", formatClock(current.Sunrise))
@@ -137,12 +145,13 @@ func CurrentWeather(location weather.Location, current weather.CurrentWeather, u
 	cityTitle := BoldCyan(fmt.Sprintf("📍 %s", strings.ToUpper(locationLabel(location))))
 
 	stats := fmt.Sprintf(
-		"%s   %s\n%s %s\n%s  %d%s\n%s    %s%%\n%s  %s %s\n%s %s%%\n%s %s\n%s     %s\n%s      %s",
+		"%s   %s\n%s %s\n%s  %d%s\n%s    %s%%\n%s  %s %s\n%s %s %s\n%s %s%%\n%s %s\n%s     %s\n%s      %s",
 		Bold("Condition:"), Italic(condition),
 		Bold("Temperature:"), formatTemp(current.Temperature, units),
 		Bold("Feels Like:"), round(current.FeelsLike), unitLabel(units),
 		Bold("Humidity:"), numStr(current.Humidity),
 		Bold("Wind Speed:"), numStr(current.Wind), windUnitLabel(units),
+		Bold("Precipitation:"), numStr(current.Precipitation), precipitationUnitLabel(units),
 		Bold("Cloud Cover:"), numStr(current.CloudCover),
 		Bold("Time of Day:"), fmt.Sprintf("%s %s", timeOfDay, timeOfDayEmoji[timeOfDay]),
 		Bold("Sunrise:"), formatClock(current.Sunrise),

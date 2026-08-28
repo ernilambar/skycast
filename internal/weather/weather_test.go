@@ -144,7 +144,8 @@ func TestFetchWeatherParsesCurrentWeather(t *testing.T) {
 			"relative_humidity_2m": 60,
 			"apparent_temperature": 23,
 			"weather_code": 3,
-			"wind_speed_10m": 5
+			"wind_speed_10m": 5,
+			"precipitation": 1.2
 		}
 	}`, 200)
 
@@ -153,7 +154,7 @@ func TestFetchWeatherParsesCurrentWeather(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	want := Weather{Current: CurrentWeather{Temperature: 21, FeelsLike: 23, Humidity: 60, Wind: 5, Code: 3}}
+	want := Weather{Current: CurrentWeather{Temperature: 21, FeelsLike: 23, Humidity: 60, Wind: 5, Precipitation: 1.2, Code: 3}}
 	if !reflect.DeepEqual(w, want) {
 		t.Errorf("FetchWeather() = %+v, want %+v", w, want)
 	}
