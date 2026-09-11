@@ -62,8 +62,6 @@ go run . "New York" --units imperial --plain
 go run .
 ```
 
-## Copyright and License
+## License
 
-This project is licensed under the [MIT](http://opensource.org/licenses/MIT).
-
-2026 &copy; [Nilambar Sharma](https://www.nilambar.net).
+[MIT](LICENSE) © [Nilambar Sharma](https://www.nilambar.net)
