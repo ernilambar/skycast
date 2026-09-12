@@ -2,6 +2,7 @@ package render
 
 import (
 	"fmt"
+	"io"
 	"math"
 	"strconv"
 	"strings"
@@ -122,22 +123,22 @@ func timeOfDayBucket(current, sunrise, sunset string) string {
 
 // CurrentWeather prints the current conditions for a location, either as a
 // bordered card or as plain text.
-func CurrentWeather(location weather.Location, current weather.CurrentWeather, units string, plain bool) {
+func CurrentWeather(w io.Writer, location weather.Location, current weather.CurrentWeather, units string, plain bool) {
 	condition := CodeToCondition(current.Code)
 	timeOfDay := timeOfDayBucket(current.Time, current.Sunrise, current.Sunset)
 
 	if plain {
-		fmt.Printf("Location: %s\n", locationLabel(location))
-		fmt.Printf("Condition: %s\n", condition)
-		fmt.Printf("Temperature: %d%s\n", round(current.Temperature), unitLabel(units))
-		fmt.Printf("Feels Like: %d%s\n", round(current.FeelsLike), unitLabel(units))
-		fmt.Printf("Humidity: %s%%\n", numStr(current.Humidity))
-		fmt.Printf("Wind Speed: %s %s\n", numStr(current.Wind), windUnitLabel(units))
-		fmt.Printf("Precipitation: %s %s\n", numStr(current.Precipitation), precipitationUnitLabel(units))
-		fmt.Printf("Cloud Cover: %s%%\n", numStr(current.CloudCover))
-		fmt.Printf("Time of Day: %s\n", timeOfDay)
-		fmt.Printf("Sunrise: %s\n", formatClock(current.Sunrise))
-		fmt.Printf("Sunset: %s\n", formatClock(current.Sunset))
+		fmt.Fprintf(w, "Location: %s\n", locationLabel(location))
+		fmt.Fprintf(w, "Condition: %s\n", condition)
+		fmt.Fprintf(w, "Temperature: %d%s\n", round(current.Temperature), unitLabel(units))
+		fmt.Fprintf(w, "Feels Like: %d%s\n", round(current.FeelsLike), unitLabel(units))
+		fmt.Fprintf(w, "Humidity: %s%%\n", numStr(current.Humidity))
+		fmt.Fprintf(w, "Wind Speed: %s %s\n", numStr(current.Wind), windUnitLabel(units))
+		fmt.Fprintf(w, "Precipitation: %s %s\n", numStr(current.Precipitation), precipitationUnitLabel(units))
+		fmt.Fprintf(w, "Cloud Cover: %s%%\n", numStr(current.CloudCover))
+		fmt.Fprintf(w, "Time of Day: %s\n", timeOfDay)
+		fmt.Fprintf(w, "Sunrise: %s\n", formatClock(current.Sunrise))
+		fmt.Fprintf(w, "Sunset: %s\n", formatClock(current.Sunset))
 		return
 	}
 
@@ -158,22 +159,23 @@ func CurrentWeather(location weather.Location, current weather.CurrentWeather, u
 		Bold("Sunset:"), formatClock(current.Sunset),
 	)
 
-	fmt.Println()
-	fmt.Println(cityTitle)
-	fmt.Println(icon)
-	fmt.Println(stats)
-	fmt.Println()
+	fmt.Fprintln(w)
+	fmt.Fprintln(w, cityTitle)
+	fmt.Fprintln(w, icon)
+	fmt.Fprintln(w, stats)
+	fmt.Fprintln(w)
 }
 
 // Forecast prints a multi-day forecast, either as a bordered card or as
 // plain text.
-func Forecast(daily []weather.DailyForecast, units string, plain bool) {
+func Forecast(w io.Writer, daily []weather.DailyForecast, units string, plain bool) {
 	if plain {
-		fmt.Println()
-		fmt.Println("5-Day Forecast:")
+		fmt.Fprintln(w)
+		fmt.Fprintln(w, "5-Day Forecast:")
 		for _, day := range daily {
 			condition := CodeToCondition(day.Code)
-			fmt.Printf(
+			fmt.Fprintf(
+				w,
 				"%s: %s, High %d%s, Low %d%s, Precipitation %d%%\n",
 				weekdayName(day.Date), condition,
 				round(day.TempMax), unitLabel(units),
@@ -197,7 +199,7 @@ func Forecast(daily []weather.DailyForecast, units string, plain bool) {
 		)
 	}
 
-	fmt.Println(BoldCyan("5-Day Forecast"))
-	fmt.Println(strings.Join(rows, "\n"))
-	fmt.Println()
+	fmt.Fprintln(w, BoldCyan("5-Day Forecast"))
+	fmt.Fprintln(w, strings.Join(rows, "\n"))
+	fmt.Fprintln(w)
 }

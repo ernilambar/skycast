@@ -2,12 +2,23 @@ package weather
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 )
 
 var httpClient = &http.Client{}
+
+// Sentinel errors returned by the weather package. Callers can match them
+// with errors.Is while the wrapped message stays user-friendly.
+var (
+	ErrGeocodingService  = errors.New("unable to reach the geocoding service")
+	ErrIPLocationService = errors.New("unable to reach the IP location service")
+	ErrWeatherService    = errors.New("unable to reach the weather service")
+	ErrCityNotFound      = errors.New("city not found")
+	ErrIPDetection       = errors.New("unable to detect location from IP address")
+)
 
 // Location is a resolved place with coordinates.
 type Location struct {
@@ -55,12 +66,12 @@ func GeocodeCity(city string) (Location, error) {
 
 	res, err := httpClient.Get(u)
 	if err != nil {
-		return Location{}, fmt.Errorf("unable to reach the geocoding service")
+		return Location{}, ErrGeocodingService
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
-		return Location{}, fmt.Errorf("unable to reach the geocoding service")
+		return Location{}, ErrGeocodingService
 	}
 
 	var data struct {
@@ -73,11 +84,11 @@ func GeocodeCity(city string) (Location, error) {
 	}
 
 	if err := json.NewDecoder(res.Body).Decode(&data); err != nil {
-		return Location{}, fmt.Errorf("unable to reach the geocoding service")
+		return Location{}, ErrGeocodingService
 	}
 
 	if len(data.Results) == 0 {
-		return Location{}, fmt.Errorf("city %q not found", city)
+		return Location{}, fmt.Errorf("%w: %q", ErrCityNotFound, city)
 	}
 
 	result := data.Results[0]
@@ -111,12 +122,12 @@ func LocateByIP() (Location, error) {
 func locateByIPWhoIs() (Location, error) {
 	res, err := httpClient.Get("https://ipwho.is/")
 	if err != nil {
-		return Location{}, fmt.Errorf("unable to reach the IP location service")
+		return Location{}, ErrIPLocationService
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
-		return Location{}, fmt.Errorf("unable to reach the IP location service")
+		return Location{}, ErrIPLocationService
 	}
 
 	var data struct {
@@ -128,11 +139,11 @@ func locateByIPWhoIs() (Location, error) {
 	}
 
 	if err := json.NewDecoder(res.Body).Decode(&data); err != nil {
-		return Location{}, fmt.Errorf("unable to reach the IP location service")
+		return Location{}, ErrIPLocationService
 	}
 
 	if !data.Success || data.Latitude == 0 {
-		return Location{}, fmt.Errorf("unable to detect location from IP address")
+		return Location{}, ErrIPDetection
 	}
 
 	return Location{
@@ -146,12 +157,12 @@ func locateByIPWhoIs() (Location, error) {
 func locateByIPAPI() (Location, error) {
 	res, err := httpClient.Get("http://ip-api.com/json/")
 	if err != nil {
-		return Location{}, fmt.Errorf("unable to reach the IP location service")
+		return Location{}, ErrIPLocationService
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
-		return Location{}, fmt.Errorf("unable to reach the IP location service")
+		return Location{}, ErrIPLocationService
 	}
 
 	var data struct {
@@ -163,11 +174,11 @@ func locateByIPAPI() (Location, error) {
 	}
 
 	if err := json.NewDecoder(res.Body).Decode(&data); err != nil {
-		return Location{}, fmt.Errorf("unable to reach the IP location service")
+		return Location{}, ErrIPLocationService
 	}
 
 	if data.Status != "success" || data.Lat == 0 {
-		return Location{}, fmt.Errorf("unable to detect location from IP address")
+		return Location{}, ErrIPDetection
 	}
 
 	return Location{
@@ -213,12 +224,12 @@ func FetchWeather(latitude, longitude float64, units string, forecast bool) (Wea
 
 	res, err := httpClient.Get("https://api.open-meteo.com/v1/forecast?" + params.Encode())
 	if err != nil {
-		return Weather{}, fmt.Errorf("unable to reach the weather service")
+		return Weather{}, ErrWeatherService
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
-		return Weather{}, fmt.Errorf("unable to reach the weather service")
+		return Weather{}, ErrWeatherService
 	}
 
 	var data struct {
@@ -244,7 +255,7 @@ func FetchWeather(latitude, longitude float64, units string, forecast bool) (Wea
 	}
 
 	if err := json.NewDecoder(res.Body).Decode(&data); err != nil {
-		return Weather{}, fmt.Errorf("unable to reach the weather service")
+		return Weather{}, ErrWeatherService
 	}
 
 	result := Weather{

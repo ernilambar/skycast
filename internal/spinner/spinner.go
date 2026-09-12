@@ -4,6 +4,7 @@ package spinner
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"sync"
 	"time"
@@ -11,20 +12,32 @@ import (
 
 var frames = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
 
-const interval = 80 * time.Millisecond
+const defaultInterval = 80 * time.Millisecond
 
 // Spinner is a start/stop terminal spinner that writes to stderr.
 type Spinner struct {
-	mu      sync.Mutex
-	text    string
-	running bool
-	stopCh  chan struct{}
-	doneCh  chan struct{}
+	mu       sync.Mutex
+	out      io.Writer
+	interval time.Duration
+	text     string
+	running  bool
+	stopCh   chan struct{}
+	doneCh   chan struct{}
 }
 
-// New returns a stopped Spinner.
+// New returns a stopped Spinner that renders to stderr.
 func New() *Spinner {
-	return &Spinner{}
+	return &Spinner{out: os.Stderr, interval: defaultInterval}
+}
+
+// SetOutput sets the writer the spinner renders to. Call it before Start.
+func (s *Spinner) SetOutput(w io.Writer) {
+	s.out = w
+}
+
+// SetInterval sets the frame refresh interval. Call it before Start.
+func (s *Spinner) SetInterval(d time.Duration) {
+	s.interval = d
 }
 
 // Start begins rendering the spinner with the given text.
@@ -60,13 +73,13 @@ func (s *Spinner) Stop() {
 	close(s.stopCh)
 	<-s.doneCh
 
-	fmt.Fprint(os.Stderr, "\r\x1b[2K")
+	fmt.Fprint(s.out, "\r\x1b[2K")
 }
 
 func (s *Spinner) run() {
 	defer close(s.doneCh)
 
-	ticker := time.NewTicker(interval)
+	ticker := time.NewTicker(s.interval)
 	defer ticker.Stop()
 
 	frame := 0
@@ -76,7 +89,7 @@ func (s *Spinner) run() {
 		text := s.text
 		s.mu.Unlock()
 
-		fmt.Fprintf(os.Stderr, "\r\x1b[2K%s %s", frames[frame%len(frames)], text)
+		fmt.Fprintf(s.out, "\r\x1b[2K%s %s", frames[frame%len(frames)], text)
 		frame++
 
 		select {
