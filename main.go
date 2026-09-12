@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -14,7 +15,22 @@ import (
 // version is set at build time via -ldflags "-X main.version=...".
 var version = "dev"
 
+// Package-level seams so tests can substitute the network calls and spinner.
+// This mirrors the httpClient override pattern used in internal/weather.
+var (
+	geocodeCity  = weather.GeocodeCity
+	locateByIP   = weather.LocateByIP
+	fetchWeather = weather.FetchWeather
+	newSpinner   = spinner.New
+)
+
 func main() {
+	if err := newRootCmd(version).Execute(); err != nil {
+		os.Exit(1)
+	}
+}
+
+func newRootCmd(version string) *cobra.Command {
 	var forecast bool
 	var units string
 	var plain bool
@@ -29,7 +45,7 @@ func main() {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if units != "metric" && units != "imperial" {
 				err := fmt.Errorf(`invalid units "%s": must be "metric" or "imperial"`, units)
-				printError(err)
+				printError(cmd.ErrOrStderr(), err)
 				return err
 			}
 
@@ -38,8 +54,8 @@ func main() {
 				city = args[0]
 			}
 
-			if err := run(city, forecast, units, plain); err != nil {
-				printError(err)
+			if err := run(cmd.OutOrStdout(), city, forecast, units, plain); err != nil {
+				printError(cmd.ErrOrStderr(), err)
 				return err
 			}
 
@@ -52,13 +68,11 @@ func main() {
 	rootCmd.Flags().BoolVarP(&plain, "plain", "p", false, "Output simple plain text without colors or icons")
 	rootCmd.SetVersionTemplate("{{.Version}}\n")
 
-	if err := rootCmd.Execute(); err != nil {
-		os.Exit(1)
-	}
+	return rootCmd
 }
 
-func run(city string, forecast bool, units string, plain bool) error {
-	sp := spinner.New()
+func run(out io.Writer, city string, forecast bool, units string, plain bool) error {
+	sp := newSpinner()
 
 	if city != "" {
 		sp.Start(fmt.Sprintf("Looking up %s...", city))
@@ -70,9 +84,9 @@ func run(city string, forecast bool, units string, plain bool) error {
 	var err error
 
 	if city != "" {
-		location, err = weather.GeocodeCity(city)
+		location, err = geocodeCity(city)
 	} else {
-		location, err = weather.LocateByIP()
+		location, err = locateByIP()
 	}
 
 	if err != nil {
@@ -82,7 +96,7 @@ func run(city string, forecast bool, units string, plain bool) error {
 
 	sp.SetText("Fetching weather data...")
 
-	w, err := weather.FetchWeather(location.Latitude, location.Longitude, units, forecast)
+	w, err := fetchWeather(location.Latitude, location.Longitude, units, forecast)
 
 	sp.Stop()
 
@@ -90,15 +104,15 @@ func run(city string, forecast bool, units string, plain bool) error {
 		return err
 	}
 
-	render.CurrentWeather(location, w.Current, units, plain)
+	render.CurrentWeather(out, location, w.Current, units, plain)
 
 	if forecast && w.Daily != nil {
-		render.Forecast(w.Daily, units, plain)
+		render.Forecast(out, w.Daily, units, plain)
 	}
 
 	return nil
 }
 
-func printError(err error) {
-	fmt.Fprintln(os.Stderr, render.Red("Error: "+err.Error()))
+func printError(w io.Writer, err error) {
+	fmt.Fprintln(w, render.Red("Error: "+err.Error()))
 }
